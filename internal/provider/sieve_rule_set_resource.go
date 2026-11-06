@@ -235,11 +235,7 @@ func (r *sieveRuleSetResource) Read(ctx context.Context, req resource.ReadReques
 		state.Active = types.BoolValue(script.Active)
 		break
 	}
-	// This server's LISTSCRIPTS only lists the active script, so an inactive
-	// script cannot be distinguished from a deleted one. If the script was
-	// active and is now absent it was removed externally; otherwise keep the
-	// state as-is.
-	if !found && state.Active.ValueBool() {
+	if !found {
 		resp.State.RemoveResource(ctx)
 		return
 	}

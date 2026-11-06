@@ -68,8 +68,8 @@ limitations the provider works around:
 
 - `GETSCRIPT` returns an error, so script **content cannot be read back** and
   drift on `content` is undetectable.
-- `LISTSCRIPTS` only lists the **active** script, so existence of inactive
-  scripts is not verified on refresh (removal of an inactive script
-  out-of-band is only detected if it was active).
+- `LISTSCRIPTS` output may start with a malformed spurious entry; the
+  provider skips it. All real scripts (active or not) are listed, so
+  out-of-band deletion is detected on refresh.
 - Deleting the active script requires deactivating it first; the provider
   handles this automatically.
