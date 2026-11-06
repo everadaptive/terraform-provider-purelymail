@@ -2,7 +2,10 @@ package provider
 
 import (
 	"context"
+	crand "crypto/rand"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/everadaptive/terraform-provider-purelymail/internal/purelymail"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -12,7 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ resource.Resource = &appPasswordResource{}
+var (
+	_ resource.Resource = &appPasswordResource{}
+)
 
 func NewAppPasswordResource() resource.Resource {
 	return &appPasswordResource{}
@@ -23,10 +28,11 @@ type appPasswordResource struct {
 }
 
 type appPasswordResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	UserHandle  types.String `tfsdk:"user_handle"`
-	Name        types.String `tfsdk:"name"`
-	AppPassword types.String `tfsdk:"app_password"`
+	ID           types.String `tfsdk:"id"`
+	UserHandle   types.String `tfsdk:"user_handle"`
+	Name         types.String `tfsdk:"name"`
+	ResolvedName types.String `tfsdk:"resolved_name"`
+	AppPassword  types.String `tfsdk:"app_password"`
 }
 
 func (r *appPasswordResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -49,9 +55,21 @@ func (r *appPasswordResource) Schema(_ context.Context, _ resource.SchemaRequest
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Optional user-friendly description of the app password.",
-				Optional:            true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				// Names are not unique server-side and app passwords cannot
+				// be listed, so a random suffix is appended at create time
+				// to make orphan cleanup in the web UI unambiguous; the final
+				// name is exposed as resolved_name.
+				MarkdownDescription: "User-friendly description of the app password. A random suffix " +
+					"is appended at create time so each password is identifiable in the web UI.",
+				Optional:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
+			"resolved_name": schema.StringAttribute{
+				MarkdownDescription: "The final name registered with the server (config `name` plus a random suffix).",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"app_password": schema.StringAttribute{
 				MarkdownDescription: "The generated app password (sensitive). Only available in state.",
@@ -95,18 +113,42 @@ func (r *appPasswordResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
+	// Names are not unique server-side and there is no list endpoint, so a
+	// random suffix makes each provider-created password identifiable for
+	// orphan cleanup in the web UI.
+	name := plan.Name.ValueString()
+	if name == "" {
+		name = "terraform"
+	}
+	name = name + "-" + randSuffix(6)
+
 	out, err := r.client.CreateAppPassword(ctx, purelymail.CreateAppPasswordRequest{
 		UserHandle: plan.UserHandle.ValueString(),
-		Name:       plan.Name.ValueString(),
+		Name:       name,
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to create app password", err.Error())
 		return
 	}
 
+	plan.ResolvedName = types.StringValue(name)
 	plan.AppPassword = types.StringValue(out.AppPassword)
 	plan.ID = types.StringValue(out.AppPassword)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+// randSuffix returns a random lowercase alphanumeric suffix.
+func randSuffix(n int) string {
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, n)
+	if _, err := crand.Read(b); err != nil {
+		// Unreachable in practice; fall back to time-based uniqueness.
+		return strconv.FormatInt(time.Now().UnixNano(), 36)
+	}
+	for i := range b {
+		b[i] = chars[int(b[i])%len(chars)]
+	}
+	return string(b)
 }
 
 func (r *appPasswordResource) Read(_ context.Context, _ resource.ReadRequest, _ *resource.ReadResponse) {

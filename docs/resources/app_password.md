@@ -33,6 +33,7 @@ output "app_password" {
 ## Attribute Reference
 
 - `id` — Same as `app_password` (the password is the deletion key).
+- `resolved_name` — (Computed) The final name registered with the server: the configured `name` (or `terraform`) plus a random suffix. App password names are not unique server-side and cannot be listed via the API, so the suffix makes each provider-created password identifiable in the web UI.
 - `app_password` — (Computed, Sensitive) The generated app password.
 
 ## Import
