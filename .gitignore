@@ -6,4 +6,3 @@
 .terraform.lock.hcl
 crash.log
 terraform-provider-purelymail
-tfenv
