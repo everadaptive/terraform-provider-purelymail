@@ -81,7 +81,9 @@ func (p *purelymailProvider) Configure(ctx context.Context, req provider.Configu
 }
 
 func (p *purelymailProvider) Resources(_ context.Context) []func() resource.Resource {
-	return nil
+	return []func() resource.Resource{
+		NewDomainResource,
+	}
 }
 
 func (p *purelymailProvider) DataSources(_ context.Context) []func() datasource.DataSource {

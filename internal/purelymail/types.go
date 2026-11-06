@@ -22,6 +22,34 @@ type ApiDomainInfo struct {
 	DnsSummary            *ApiDomainDnsSummary `json:"dnsSummary"`
 }
 
+// AddDomainRequest adds a domain to the account.
+type AddDomainRequest struct {
+	DomainName string `json:"domainName"`
+}
+
+// GetOwnershipCodeRequest fetches the TXT ownership-proof code for a domain.
+type GetOwnershipCodeRequest struct {
+	DomainName string `json:"domainName"`
+}
+
+// GetOwnershipCodeResponse returns the TXT ownership-proof code.
+type GetOwnershipCodeResponse struct {
+	Code string `json:"code"`
+}
+
+// UpdateDomainSettingsRequest updates settings for a domain.
+type UpdateDomainSettingsRequest struct {
+	Name                  string `json:"name"`
+	AllowAccountReset     *bool  `json:"allowAccountReset,omitempty"`
+	SymbolicSubaddressing *bool  `json:"symbolicSubaddressing,omitempty"`
+	RecheckDNS            *bool  `json:"recheckDns,omitempty"`
+}
+
+// DeleteDomainRequest deletes a domain.
+type DeleteDomainRequest struct {
+	Name string `json:"name"`
+}
+
 // CreateUserRequest creates a user under the account's domain.
 type CreateUserRequest struct {
 	UserName                 string `json:"userName"`

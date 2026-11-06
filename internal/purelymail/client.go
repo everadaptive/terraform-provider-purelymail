@@ -101,6 +101,44 @@ func (c *Client) CheckAccountCredit(ctx context.Context) (credit string, err err
 	return out.Credit, nil
 }
 
+// AddDomain adds a domain to the account.
+func (c *Client) AddDomain(ctx context.Context, req AddDomainRequest) error {
+	return c.do(ctx, "addDomain", req, nil)
+}
+
+// GetOwnershipCode fetches the TXT ownership-proof code for a domain.
+func (c *Client) GetOwnershipCode(ctx context.Context, req GetOwnershipCodeRequest) (*GetOwnershipCodeResponse, error) {
+	var out GetOwnershipCodeResponse
+	if err := c.do(ctx, "getOwnershipCode", req, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// UpdateDomainSettings updates settings for a domain.
+func (c *Client) UpdateDomainSettings(ctx context.Context, req UpdateDomainSettingsRequest) error {
+	return c.do(ctx, "updateDomainSettings", req, nil)
+}
+
+// DeleteDomain deletes a domain.
+func (c *Client) DeleteDomain(ctx context.Context, req DeleteDomainRequest) error {
+	return c.do(ctx, "deleteDomain", req, nil)
+}
+
+// FindDomain fetches a single domain by name; returns nil if not present.
+func (c *Client) FindDomain(ctx context.Context, name string) (*ApiDomainInfo, error) {
+	domains, err := c.ListDomains(ctx, ListDomainsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	for _, d := range domains {
+		if d.Name == name {
+			return &d, nil
+		}
+	}
+	return nil, nil
+}
+
 // ListDomains lists domains accessible to the account.
 func (c *Client) ListDomains(ctx context.Context, req ListDomainsRequest) ([]ApiDomainInfo, error) {
 	var out struct {
