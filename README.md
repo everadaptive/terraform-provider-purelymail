@@ -58,6 +58,7 @@ resource "purelymail_user" "hello" {
 | `purelymail_domain` | Domain settings, DNS check results, ownership code |
 | `purelymail_dns_records` | The standard record set PurelyMail requires (ownership TXT, MX, SPF, DKIM, DMARC, autoconfig) — use these to create matching records at your DNS provider |
 | `purelymail_users` | All mailboxes under the account |
+| `purelymail_user` | Single mailbox lookup by full username or parts |
 
 Full argument references live in `docs/`, with examples under `examples/`.
 

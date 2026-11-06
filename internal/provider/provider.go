@@ -126,5 +126,6 @@ func (p *purelymailProvider) DataSources(_ context.Context) []func() datasource.
 		NewDomainDataSource,
 		NewDNSRecordsDataSource,
 		NewUsersDataSource,
+		NewUserDataSource,
 	}
 }
