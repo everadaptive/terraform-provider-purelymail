@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/everadaptive/terraform-provider-purelymail/internal/purelymail"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -70,14 +71,10 @@ func (p *purelymailProvider) Configure(ctx context.Context, req provider.Configu
 
 	baseURL := config.BaseURL.ValueString()
 	if baseURL == "" {
-		baseURL = "https://api.purelymail.com"
+		baseURL = "https://purelymail.com"
 	}
 
-	client, diags := newClient(baseURL, token)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	client := purelymail.New(baseURL, token)
 
 	resp.DataSourceData = client
 	resp.ResourceData = client
