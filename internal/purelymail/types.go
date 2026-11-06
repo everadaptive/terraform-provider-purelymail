@@ -119,6 +119,53 @@ type DeleteRoutingRuleRequest struct {
 	RoutingRuleID int64 `json:"routingRuleId"`
 }
 
+// CreateAppPasswordRequest creates an app password for a user.
+type CreateAppPasswordRequest struct {
+	// UserHandle is the full "user@domain.com".
+	UserHandle string `json:"userHandle"`
+	// Name is an optional user-friendly description.
+	Name string `json:"name,omitempty"`
+}
+
+// CreateAppPasswordResponse returns the new app password.
+type CreateAppPasswordResponse struct {
+	AppPassword string `json:"appPassword"`
+}
+
+// DeleteAppPasswordRequest deletes an app password by its full value.
+type DeleteAppPasswordRequest struct {
+	UserName    string `json:"userName"`
+	AppPassword string `json:"appPassword"`
+}
+
+// UpsertPasswordResetRequest creates or updates a password reset method.
+type UpsertPasswordResetRequest struct {
+	UserName string `json:"userName"`
+	// ExistingTarget, when set, updates the existing method with that target
+	// instead of creating a new one.
+	ExistingTarget string `json:"existingTarget,omitempty"`
+	// Type is either "email" or "phone".
+	Type        string `json:"type"`
+	Target      string `json:"target"`
+	Description string `json:"description,omitempty"`
+	// AllowMfaReset defaults to true server-side.
+	AllowMfaReset *bool `json:"allowMfaReset,omitempty"`
+}
+
+// PasswordResetMethod describes a password reset method for a user.
+type PasswordResetMethod struct {
+	Type          string `json:"type"`
+	Target        string `json:"target"`
+	Description   string `json:"description"`
+	AllowMfaReset bool   `json:"allowMfaReset"`
+}
+
+// DeletePasswordResetRequest deletes a password reset method by target.
+type DeletePasswordResetRequest struct {
+	UserName string `json:"userName"`
+	Target   string `json:"target"`
+}
+
 // SplitUserName splits a full username (user@domain.com) into local part and
 // domain. It returns an error if the username is not of that form.
 func SplitUserName(full string) (local, domain string, err error) {

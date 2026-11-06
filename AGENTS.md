@@ -42,7 +42,8 @@ docs/                    # provider & resource documentation (registry-style)
 - [x] `purelymail_domain` — domain resource (CRUD + import) and data source
 - [x] `purelymail_user` — user resource (CRUD + import)
 - [x] `purelymail_dns_records` — data source emitting the standard record set per domain
-- [ ] `purelymail_routing_rule` — routing/catch-all rules
+- [x] `purelymail_routing_rule` — routing/catch-all rules
+- [x] `purelymail_app_password`, `purelymail_password_reset` — secondary resources
 - [ ] `purelymail_app_password`, `purelymail_password_reset` — secondary resources as needed
 
 Each resource needs a matching data source only if useful for lookups (e.g. domain lookup); do not add data sources speculatively.

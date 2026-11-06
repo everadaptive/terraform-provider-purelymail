@@ -194,6 +194,41 @@ func (c *Client) DeleteRoutingRule(ctx context.Context, req DeleteRoutingRuleReq
 	return c.do(ctx, "deleteRoutingRule", req, nil)
 }
 
+// CreateAppPassword creates an app password and returns its full value.
+func (c *Client) CreateAppPassword(ctx context.Context, req CreateAppPasswordRequest) (*CreateAppPasswordResponse, error) {
+	var out CreateAppPasswordResponse
+	if err := c.do(ctx, "createAppPassword", req, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// DeleteAppPassword deletes an app password by its full value.
+func (c *Client) DeleteAppPassword(ctx context.Context, req DeleteAppPasswordRequest) error {
+	return c.do(ctx, "deleteAppPassword", req, nil)
+}
+
+// ListPasswordReset lists password reset methods for a user.
+func (c *Client) ListPasswordReset(ctx context.Context, req GetUserRequest) ([]PasswordResetMethod, error) {
+	var out struct {
+		Users []PasswordResetMethod `json:"users"`
+	}
+	if err := c.do(ctx, "listPasswordReset", req, &out); err != nil {
+		return nil, err
+	}
+	return out.Users, nil
+}
+
+// UpsertPasswordReset creates or updates a password reset method.
+func (c *Client) UpsertPasswordReset(ctx context.Context, req UpsertPasswordResetRequest) error {
+	return c.do(ctx, "upsertPasswordReset", req, nil)
+}
+
+// DeletePasswordReset deletes a password reset method by target.
+func (c *Client) DeletePasswordReset(ctx context.Context, req DeletePasswordResetRequest) error {
+	return c.do(ctx, "deletePasswordReset", req, nil)
+}
+
 // ListUser lists all usernames under the account (up to 1000).
 func (c *Client) ListUser(ctx context.Context) ([]string, error) {
 	var out struct {

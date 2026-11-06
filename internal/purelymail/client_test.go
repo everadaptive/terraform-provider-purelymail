@@ -199,3 +199,55 @@ func TestCreateAndDeleteRoutingRule(t *testing.T) {
 		t.Errorf("delete body = %q", rec2.body)
 	}
 }
+
+func TestCreateAppPassword(t *testing.T) {
+	c, rec := newTestServer(t, http.StatusOK, `{"result":{"appPassword":"passw0rd-full-value"}}`)
+
+	out, err := c.CreateAppPassword(context.Background(), CreateAppPasswordRequest{UserHandle: "u@d.com", Name: "laptop"})
+	if err != nil {
+		t.Fatalf("CreateAppPassword: %v", err)
+	}
+	if out.AppPassword != "passw0rd-full-value" {
+		t.Errorf("password = %q", out.AppPassword)
+	}
+	if rec.body != `{"userHandle":"u@d.com","name":"laptop"}` {
+		t.Errorf("body = %q", rec.body)
+	}
+}
+
+func TestDeleteAppPassword(t *testing.T) {
+	c, rec := newTestServer(t, http.StatusOK, `{"result":{}}`)
+
+	err := c.DeleteAppPassword(context.Background(), DeleteAppPasswordRequest{UserName: "u@d.com", AppPassword: "pw"})
+	if err != nil {
+		t.Fatalf("DeleteAppPassword: %v", err)
+	}
+	if rec.body != `{"userName":"u@d.com","appPassword":"pw"}` {
+		t.Errorf("body = %q", rec.body)
+	}
+}
+
+func TestPasswordResetRoundTrip(t *testing.T) {
+	c, rec := newTestServer(t, http.StatusOK, `{"result":{"users":[{"type":"email","target":"r@x.com","description":"backup","allowMfaReset":true}]}}`)
+
+	methods, err := c.ListPasswordReset(context.Background(), GetUserRequest{UserName: "u@d.com"})
+	if err != nil {
+		t.Fatalf("ListPasswordReset: %v", err)
+	}
+	if len(methods) != 1 || methods[0].Target != "r@x.com" || !methods[0].AllowMfaReset {
+		t.Errorf("methods = %+v", methods)
+	}
+	if rec.body != `{"userName":"u@d.com"}` {
+		t.Errorf("body = %q", rec.body)
+	}
+
+	c2, rec2 := newTestServer(t, http.StatusOK, `{"result":{}}`)
+	yes := true
+	err = c2.UpsertPasswordReset(context.Background(), UpsertPasswordResetRequest{UserName: "u@d.com", Type: "email", Target: "r@x.com", AllowMfaReset: &yes})
+	if err != nil {
+		t.Fatalf("UpsertPasswordReset: %v", err)
+	}
+	if rec2.body != `{"userName":"u@d.com","type":"email","target":"r@x.com","allowMfaReset":true}` {
+		t.Errorf("upsert body = %q", rec2.body)
+	}
+}
