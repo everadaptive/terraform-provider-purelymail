@@ -18,18 +18,33 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Check for GPG secrets
+        id: gpg
+        run: |
+          if [ -n "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Import GPG key
+        if: steps.gpg.outputs.enabled == 'true'
         id: import_gpg
-        if: env.GPG_PRIVATE_KEY != ''
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
-      - name: Run GoReleaser
+      - name: Run GoReleaser (with signing)
+        if: steps.gpg.outputs.enabled == 'true'
         uses: goreleaser/goreleaser-action@v6
         with:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+      - name: Run GoReleaser (unsigned)
+        if: steps.gpg.outputs.enabled != 'true'
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          args: release --clean --skip=sign
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
