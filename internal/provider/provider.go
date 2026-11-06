@@ -107,6 +107,7 @@ func (p *purelymailProvider) Resources(_ context.Context) []func() resource.Reso
 		NewAppPasswordResource,
 		NewPasswordResetResource,
 		NewSieveScriptResource,
+		NewSieveRuleSetResource,
 	}
 }
 
