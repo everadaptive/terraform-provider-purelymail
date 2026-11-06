@@ -92,15 +92,15 @@ func (r *domainResource) Configure(_ context.Context, req resource.ConfigureRequ
 	if req.ProviderData == nil {
 		return
 	}
-	client, ok := req.ProviderData.(*purelymail.Client)
+	clients, ok := req.ProviderData.(*ProviderClients)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected resource configure type",
-			fmt.Sprintf("Expected *purelymail.Client, got: %T. Please report this issue.", req.ProviderData),
+			fmt.Sprintf("Expected *ProviderClients, got: %T. Please report this issue.", req.ProviderData),
 		)
 		return
 	}
-	r.client = client
+	r.client = clients.API
 }
 
 func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

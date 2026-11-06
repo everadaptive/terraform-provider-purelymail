@@ -15,6 +15,9 @@ import (
 
 type purelymailProvider struct{}
 
+// defaultSieveHost is PurelyMail's ManageSieve endpoint.
+const defaultSieveHost = "imap.purelymail.com:4190"
+
 func New() provider.Provider {
 	return &purelymailProvider{}
 }
@@ -36,19 +39,27 @@ func (p *purelymailProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 				Optional:            true,
 				MarkdownDescription: "Base URL of the PurelyMail API. Useful for testing.",
 			},
+			"sieve_host": schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "ManageSieve endpoint for purelymail_sieve_script resources (defaults to `imap.purelymail.com:4190`).",
+			},
 		},
 	}
 }
 
-type providerData struct {
-	APIToken string
-	BaseURL  string
+// ProviderClients is the bundle passed to resources and data sources via
+// Configure.
+type ProviderClients struct {
+	API *purelymail.Client
+	// SieveHost is the ManageSieve endpoint (host:port).
+	SieveHost string
 }
 
 func (p *purelymailProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var config struct {
-		APIToken types.String `tfsdk:"api_token"`
-		BaseURL  types.String `tfsdk:"base_url"`
+		APIToken  types.String `tfsdk:"api_token"`
+		BaseURL   types.String `tfsdk:"base_url"`
+		SieveHost types.String `tfsdk:"sieve_host"`
 	}
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
@@ -74,10 +85,18 @@ func (p *purelymailProvider) Configure(ctx context.Context, req provider.Configu
 		baseURL = "https://purelymail.com"
 	}
 
-	client := purelymail.New(baseURL, token)
+	sieveHost := config.SieveHost.ValueString()
+	if sieveHost == "" {
+		sieveHost = defaultSieveHost
+	}
 
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	clients := &ProviderClients{
+		API:       purelymail.New(baseURL, token),
+		SieveHost: sieveHost,
+	}
+
+	resp.DataSourceData = clients
+	resp.ResourceData = clients
 }
 
 func (p *purelymailProvider) Resources(_ context.Context) []func() resource.Resource {
@@ -87,6 +106,7 @@ func (p *purelymailProvider) Resources(_ context.Context) []func() resource.Reso
 		NewRoutingRuleResource,
 		NewAppPasswordResource,
 		NewPasswordResetResource,
+		NewSieveScriptResource,
 	}
 }
 

@@ -44,7 +44,7 @@ docs/                    # provider & resource documentation (registry-style)
 - [x] `purelymail_dns_records` — data source emitting the standard record set per domain
 - [x] `purelymail_routing_rule` — routing/catch-all rules
 - [x] `purelymail_app_password`, `purelymail_password_reset` — secondary resources
-- [ ] `purelymail_app_password`, `purelymail_password_reset` — secondary resources as needed
+- [x] `purelymail_sieve_script` — Sieve filter scripts via ManageSieve (experimental)
 
 Each resource needs a matching data source only if useful for lookups (e.g. domain lookup); do not add data sources speculatively.
 

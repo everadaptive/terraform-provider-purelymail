@@ -91,15 +91,15 @@ func (d *domainDataSource) Configure(_ context.Context, req datasource.Configure
 	if req.ProviderData == nil {
 		return
 	}
-	client, ok := req.ProviderData.(*purelymail.Client)
+	clients, ok := req.ProviderData.(*ProviderClients)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected data source configure type",
-			fmt.Sprintf("Expected *purelymail.Client, got: %T. Please report this issue.", req.ProviderData),
+			fmt.Sprintf("Expected *ProviderClients, got: %T. Please report this issue.", req.ProviderData),
 		)
 		return
 	}
-	d.client = client
+	d.client = clients.API
 }
 
 func (d *domainDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
