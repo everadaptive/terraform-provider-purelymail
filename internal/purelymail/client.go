@@ -66,7 +66,7 @@ func (c *Client) do(ctx context.Context, path string, req any, out any) error {
 	if err != nil {
 		return fmt.Errorf("purelymail: %s: %w", path, err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	// Cap the response size so a misbehaving server cannot exhaust memory.
 	respBody, err := io.ReadAll(io.LimitReader(httpResp.Body, 10<<20))

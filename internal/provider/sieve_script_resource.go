@@ -129,7 +129,7 @@ func (r *sieveScriptResource) Create(ctx context.Context, req resource.CreateReq
 		resp.Diagnostics.AddError("Unable to connect to ManageSieve", err.Error())
 		return
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	if err := c.PutScript(plan.Name.ValueString(), plan.Content.ValueString(), plan.Active.ValueBool()); err != nil {
 		resp.Diagnostics.AddError("Unable to upload Sieve script", err.Error())
@@ -162,7 +162,7 @@ func (r *sieveScriptResource) Read(ctx context.Context, req resource.ReadRequest
 		resp.Diagnostics.AddError("Unable to connect to ManageSieve", err.Error())
 		return
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	scripts, err := c.ListScripts()
 	if err != nil {
@@ -198,7 +198,7 @@ func (r *sieveScriptResource) Update(ctx context.Context, req resource.UpdateReq
 		resp.Diagnostics.AddError("Unable to connect to ManageSieve", err.Error())
 		return
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	// PUTSCRIPT overwrites an existing script of the same name.
 	if err := c.PutScript(plan.Name.ValueString(), plan.Content.ValueString(), plan.Active.ValueBool()); err != nil {
@@ -221,7 +221,7 @@ func (r *sieveScriptResource) Delete(ctx context.Context, req resource.DeleteReq
 		resp.Diagnostics.AddError("Unable to connect to ManageSieve", err.Error())
 		return
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	if err := c.DeleteScript(state.Name.ValueString()); err != nil {
 		resp.Diagnostics.AddError("Unable to delete Sieve script", err.Error())

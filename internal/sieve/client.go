@@ -81,12 +81,12 @@ func Dial(ctx context.Context, addr string) (*Client, Capabilities, error) {
 	// before the TLS handshake; drain them so the handshake sees a clean
 	// stream. Stop on the trailing OK or on a read timeout (server sent
 	// nothing more).
-	c.conn.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+	_ = c.conn.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
 	for {
 		if _, err := c.r.ReadByte(); err != nil {
 			break // no pending data: timeout or EOF
 		}
-		c.r.UnreadByte()
+		_ = c.r.UnreadByte()
 		line, err := c.r.ReadString('\n')
 		if err != nil {
 			break
@@ -95,13 +95,13 @@ func Dial(ctx context.Context, addr string) (*Client, Capabilities, error) {
 			break
 		}
 	}
-	c.conn.SetReadDeadline(time.Time{})
+	_ = c.conn.SetReadDeadline(time.Time{})
 
 	host, _, splitErr := net.SplitHostPort(addr)
 	if splitErr != nil {
 		host = addr
 	}
-	raw.SetDeadline(time.Now().Add(30 * time.Second))
+	_ = raw.SetDeadline(time.Now().Add(30 * time.Second))
 	tlsConn := tls.Client(raw, &tls.Config{
 		ServerName: host,
 		MinVersion: tls.VersionTLS12,
@@ -109,7 +109,7 @@ func Dial(ctx context.Context, addr string) (*Client, Capabilities, error) {
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
 		return cleanup(fmt.Errorf("sieve: TLS handshake: %w", err))
 	}
-	raw.SetDeadline(time.Time{})
+	_ = raw.SetDeadline(time.Time{})
 	if cs := tlsConn.ConnectionState(); len(cs.PeerCertificates) == 0 {
 		return cleanup(fmt.Errorf("sieve: no server certificate presented for %s", host))
 	}

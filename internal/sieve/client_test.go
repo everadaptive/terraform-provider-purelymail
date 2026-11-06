@@ -50,7 +50,7 @@ func startFake(t *testing.T, fs *fakeServer) *Client {
 		if err != nil {
 			return
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 		r := bufio.NewReader(conn)
 		// greeting with capabilities + OK
 		_, _ = conn.Write([]byte("\"SASL\" \"PLAIN\"\r\n\"STARTTLS\"\r\nOK\r\n"))

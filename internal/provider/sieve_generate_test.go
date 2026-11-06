@@ -7,8 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func spec(rules ...sieveRuleSpec) []sieveRuleSpec { return rules }
-
 func match(header, typ, value string) sieveMatchSpec {
 	return sieveMatchSpec{
 		Header: types.StringValue(header),

@@ -184,7 +184,7 @@ func (r *sieveRuleSetResource) upload(ctx context.Context, m *sieveRuleSetModel,
 		diags.AddError("Unable to connect to ManageSieve", err.Error())
 		return
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	if err := c.PutScript(m.Name.ValueString(), content, m.Active.ValueBool()); err != nil {
 		diags.AddError("Unable to upload Sieve script", err.Error())
@@ -220,7 +220,7 @@ func (r *sieveRuleSetResource) Read(ctx context.Context, req resource.ReadReques
 		resp.Diagnostics.AddError("Unable to connect to ManageSieve", err.Error())
 		return
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	scripts, err := c.ListScripts()
 	if err != nil {
@@ -269,7 +269,7 @@ func (r *sieveRuleSetResource) Delete(ctx context.Context, req resource.DeleteRe
 		resp.Diagnostics.AddError("Unable to connect to ManageSieve", err.Error())
 		return
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	if err := c.DeleteScript(state.Name.ValueString()); err != nil {
 		resp.Diagnostics.AddError("Unable to delete Sieve script", err.Error())
