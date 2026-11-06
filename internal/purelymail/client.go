@@ -77,10 +77,19 @@ func (c *Client) do(ctx context.Context, path string, req any, out any) error {
 	}
 
 	var envelope struct {
+		Type   string          `json:"type"`
 		Result json.RawMessage `json:"result"`
 	}
 	if err := json.Unmarshal(respBody, &envelope); err != nil {
 		return fmt.Errorf("purelymail: %s: decode response: %w", path, err)
+	}
+	// The API reports logical errors as HTTP 200 with type "error".
+	if envelope.Type != "" && envelope.Type != "success" {
+		var apiErr APIError
+		if err := json.Unmarshal(respBody, &apiErr); err == nil && apiErr.Code != "" {
+			return fmt.Errorf("purelymail: %s: %w", path, apiErr)
+		}
+		return fmt.Errorf("purelymail: %s: API error type %q: %s", path, envelope.Type, string(respBody))
 	}
 	if out != nil {
 		if err := json.Unmarshal(envelope.Result, out); err != nil {

@@ -136,3 +136,14 @@ func TestListDomains(t *testing.T) {
 		t.Errorf("body = %q", rec.body)
 	}
 }
+
+func TestLogicalErrorEnvelope(t *testing.T) {
+	// The API returns logical errors as HTTP 200 with type "error".
+	c, _ := newTestServer(t, http.StatusOK, `{"type":"error","code":"internalError","message":"DNS ownership checks did not pass"}`)
+
+	err := c.CreateUser(context.Background(), CreateUserRequest{UserName: "x", DomainName: "d", Password: "p"})
+	var apiErr APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("want APIError, got %T: %v", err, err)
+	}
+}
