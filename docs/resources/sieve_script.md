@@ -52,6 +52,15 @@ refresh is skipped until a password is set in configuration.
 tofu import purelymail_sieve_script.main hello@example.com:main
 ```
 
+## Interaction with purelymail_sieve_rule_set
+
+A mailbox has exactly one active script. Multiple Sieve resources for the
+same user can coexist (each uploads a differently-named script), but at most
+**one** resource for a given `user_handle` should set `active = true` — the
+last one applied wins, and two resources both claiming active will
+perpetually fight each other on every apply. Deletion always deactivates
+first, so removing the active script never blocks the other one.
+
 ## Known server quirks
 
 PurelyMail's ManageSieve implementation (Apache ManageSieve v1.0) has some

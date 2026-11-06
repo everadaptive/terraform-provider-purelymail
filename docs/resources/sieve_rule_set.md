@@ -83,6 +83,15 @@ return script content), so the configuration must match what was uploaded.
 tofu import purelymail_sieve_rule_set.main hello@example.com:ruleset
 ```
 
+## Interaction with purelymail_sieve_script
+
+A mailbox has exactly one active script. Multiple Sieve resources for the
+same user can coexist (each uploads a differently-named script), but at most
+**one** resource for a given `user_handle` should set `active = true` — the
+last one applied wins, and two resources both claiming active will
+perpetually fight each other on every apply. Deletion always deactivates
+first, so removing the active script never blocks the other one.
+
 ## Known server quirks
 
 See [purelymail_sieve_script](sieve_script.md#known-server-quirks): script
