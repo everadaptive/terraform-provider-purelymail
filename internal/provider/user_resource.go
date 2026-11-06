@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -252,16 +254,27 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if err := r.client.DeleteUser(ctx, purelymail.DeleteUserRequest{
 		UserName: fullUserName(&state),
 	}); err != nil {
-		// Usernames are case-insensitive server-side but may differ in case
-		// from state; a missing user on delete is treated as success.
-		if !strings.Contains(err.Error(), "NoSuchUser") {
-			resp.Diagnostics.AddError("Unable to delete user", err.Error())
+		// A missing user on delete is treated as success.
+		var apiErr purelymail.APIError
+		if errors.As(err, &apiErr) && isNotFound(apiErr) {
+			return
 		}
+		resp.Diagnostics.AddError("Unable to delete user", err.Error())
 	}
 }
 
 func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// isNotFound reports whether the API error indicates the object does not
+// exist (error codes are not formally documented, so match known values).
+func isNotFound(err purelymail.APIError) bool {
+	switch strings.ToLower(err.Code) {
+	case "notfound", "nosuchuser", "not_found":
+		return true
+	}
+	return false
 }
 
 func fullUserName(m *userResourceModel) string {

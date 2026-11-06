@@ -69,7 +69,7 @@ The sibling repo `../cloudflare-dns` (github.com:everadaptive/cloudflare-dns) do
 - Use framework types (`types.String`, etc.) and implement all standard CRUD methods + `ImportState`.
 - API client calls go through a single client type constructed in `Configure`; resources never build HTTP requests directly.
 - Map API errors to actionable diagnostics; include the API error body text.
-- Timeouts: support `timeouts` block on resources with sane defaults (1–2 min).
+- Timeouts: terraform-plugin-framework does not support `timeouts` blocks (SDKv2-only); the API client enforces a 60s HTTP timeout and the Sieve client 30s per-operation deadlines instead.
 
 ## Docs & Tests As You Go
 

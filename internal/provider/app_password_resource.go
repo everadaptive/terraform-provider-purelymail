@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -80,9 +81,8 @@ func (r *appPasswordResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Same as `app_password` (which is the deletion key).",
+				MarkdownDescription: "`<user_handle>:<resolved_name>`; the password itself remains the deletion key.",
 				Computed:            true,
-				Sensitive:           true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -153,7 +153,8 @@ func randSuffix(n int) string {
 
 func (r *appPasswordResource) Read(_ context.Context, _ resource.ReadRequest, _ *resource.ReadResponse) {
 	// The API cannot list or fetch app passwords, so there is nothing to
-	// refresh; state is kept as-is.
+	// refresh; state is kept as-is. A per-plan warning here would be pure
+	// noise, so this limitation is documented on the resource instead.
 }
 
 func (r *appPasswordResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
