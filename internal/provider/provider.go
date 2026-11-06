@@ -84,6 +84,7 @@ func (p *purelymailProvider) Resources(_ context.Context) []func() resource.Reso
 	return []func() resource.Resource{
 		NewDomainResource,
 		NewUserResource,
+		NewRoutingRuleResource,
 	}
 }
 

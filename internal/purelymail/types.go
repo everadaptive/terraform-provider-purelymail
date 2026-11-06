@@ -95,6 +95,30 @@ type DeleteUserRequest struct {
 	UserName string `json:"userName"`
 }
 
+// CreateRoutingRuleRequest creates a routing rule for a domain.
+type CreateRoutingRuleRequest struct {
+	DomainName      string   `json:"domainName"`
+	Prefix          bool     `json:"prefix"`
+	MatchUser       string   `json:"matchUser"`
+	TargetAddresses []string `json:"targetAddresses"`
+	Catchall        bool     `json:"catchall"`
+}
+
+// RoutingRule is a routing/catch-all rule under the account.
+type RoutingRule struct {
+	ID              int64    `json:"id"`
+	DomainName      string   `json:"domainName"`
+	Prefix          bool     `json:"prefix"`
+	MatchUser       string   `json:"matchUser"`
+	TargetAddresses []string `json:"targetAddresses"`
+	Catchall        bool     `json:"catchall"`
+}
+
+// DeleteRoutingRuleRequest deletes a routing rule by id.
+type DeleteRoutingRuleRequest struct {
+	RoutingRuleID int64 `json:"routingRuleId"`
+}
+
 // SplitUserName splits a full username (user@domain.com) into local part and
 // domain. It returns an error if the username is not of that form.
 func SplitUserName(full string) (local, domain string, err error) {

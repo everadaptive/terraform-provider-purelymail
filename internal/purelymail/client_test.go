@@ -147,3 +147,55 @@ func TestLogicalErrorEnvelope(t *testing.T) {
 		t.Fatalf("want APIError, got %T: %v", err, err)
 	}
 }
+
+func TestListRoutingRules(t *testing.T) {
+	envelope := `{"result":{"rules":[{"id":7,"domainName":"x.com","prefix":false,"matchUser":"all","targetAddresses":["a@b.com"],"catchall":true}]}}`
+	c, rec := newTestServer(t, http.StatusOK, envelope)
+
+	rules, err := c.ListRoutingRules(context.Background())
+	if err != nil {
+		t.Fatalf("ListRoutingRules: %v", err)
+	}
+	if len(rules) != 1 || rules[0].ID != 7 || !rules[0].Catchall || rules[0].TargetAddresses[0] != "a@b.com" {
+		t.Errorf("rules = %+v", rules)
+	}
+	if rec.body != "{}" {
+		t.Errorf("body = %q", rec.body)
+	}
+}
+
+func TestCreateAndDeleteRoutingRule(t *testing.T) {
+	c, rec := newTestServer(t, http.StatusOK, `{"result":{}}`)
+
+	err := c.CreateRoutingRule(context.Background(), CreateRoutingRuleRequest{
+		DomainName:      "x.com",
+		Prefix:          false,
+		MatchUser:       "all",
+		TargetAddresses: []string{"a@b.com"},
+		Catchall:        true,
+	})
+	if err != nil {
+		t.Fatalf("CreateRoutingRule: %v", err)
+	}
+	var sent struct {
+		DomainName      string   `json:"domainName"`
+		TargetAddresses []string `json:"targetAddresses"`
+		Catchall        bool     `json:"catchall"`
+	}
+	if err := json.Unmarshal([]byte(rec.body), &sent); err != nil {
+		t.Fatal(err)
+	}
+	if sent.DomainName != "x.com" || !sent.Catchall || len(sent.TargetAddresses) != 1 {
+		t.Errorf("sent = %+v", sent)
+	}
+
+	rec = &record{}
+	// re-primed recorder via new server call
+	c2, rec2 := newTestServer(t, http.StatusOK, `{"result":{}}`)
+	if err := c2.DeleteRoutingRule(context.Background(), DeleteRoutingRuleRequest{RoutingRuleID: 7}); err != nil {
+		t.Fatalf("DeleteRoutingRule: %v", err)
+	}
+	if rec2.body != `{"routingRuleId":7}` {
+		t.Errorf("delete body = %q", rec2.body)
+	}
+}

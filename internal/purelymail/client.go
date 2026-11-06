@@ -159,6 +159,41 @@ func (c *Client) ListDomains(ctx context.Context, req ListDomainsRequest) ([]Api
 	return out.Domains, nil
 }
 
+// CreateRoutingRule creates a routing rule for a domain.
+func (c *Client) CreateRoutingRule(ctx context.Context, req CreateRoutingRuleRequest) error {
+	return c.do(ctx, "createRoutingRule", req, nil)
+}
+
+// ListRoutingRules lists all routing rules under the account.
+func (c *Client) ListRoutingRules(ctx context.Context) ([]RoutingRule, error) {
+	var out struct {
+		Rules []RoutingRule `json:"rules"`
+	}
+	if err := c.do(ctx, "listRoutingRules", struct{}{}, &out); err != nil {
+		return nil, err
+	}
+	return out.Rules, nil
+}
+
+// FindRoutingRule fetches a single routing rule by id; returns nil if absent.
+func (c *Client) FindRoutingRule(ctx context.Context, id int64) (*RoutingRule, error) {
+	rules, err := c.ListRoutingRules(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range rules {
+		if r.ID == id {
+			return &r, nil
+		}
+	}
+	return nil, nil
+}
+
+// DeleteRoutingRule deletes a routing rule by id.
+func (c *Client) DeleteRoutingRule(ctx context.Context, req DeleteRoutingRuleRequest) error {
+	return c.do(ctx, "deleteRoutingRule", req, nil)
+}
+
 // ListUser lists all usernames under the account (up to 1000).
 func (c *Client) ListUser(ctx context.Context) ([]string, error) {
 	var out struct {
