@@ -83,6 +83,7 @@ func (p *purelymailProvider) Configure(ctx context.Context, req provider.Configu
 func (p *purelymailProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewDomainResource,
+		NewUserResource,
 	}
 }
 

@@ -1,4 +1,7 @@
+// Package purelymail ... (see package doc in client.go)
 package purelymail
+
+import "fmt"
 
 // ListDomainsRequest lists domains accessible to the account.
 type ListDomainsRequest struct {
@@ -90,4 +93,15 @@ type ModifyUserRequest struct {
 // DeleteUserRequest deletes a user (full username, e.g. user@domain.com).
 type DeleteUserRequest struct {
 	UserName string `json:"userName"`
+}
+
+// SplitUserName splits a full username (user@domain.com) into local part and
+// domain. It returns an error if the username is not of that form.
+func SplitUserName(full string) (local, domain string, err error) {
+	for i := 0; i < len(full); i++ {
+		if full[i] == '@' {
+			return full[:i], full[i+1:], nil
+		}
+	}
+	return "", "", fmt.Errorf("username %q is not of the form user@domain", full)
 }
