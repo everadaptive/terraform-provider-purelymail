@@ -31,6 +31,7 @@ type domainDataSourceModel struct {
 	PassesSpf             types.Bool   `tfsdk:"passes_spf"`
 	PassesDkim            types.Bool   `tfsdk:"passes_dkim"`
 	PassesDmarc           types.Bool   `tfsdk:"passes_dmarc"`
+	OwnershipCode         types.String `tfsdk:"ownership_code"`
 }
 
 func (d *domainDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -76,6 +77,11 @@ func (d *domainDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			"passes_dmarc": schema.BoolAttribute{
 				MarkdownDescription: "Whether the domain's DMARC records pass checks.",
 				Computed:            true,
+			},
+			"ownership_code": schema.StringAttribute{
+				MarkdownDescription: "Full TXT record value to publish for domain ownership proof " +
+					"(e.g. as a Cloudflare DNS TXT record), fetched from the API.",
+				Computed: true,
 			},
 		},
 	}
@@ -124,6 +130,15 @@ func (d *domainDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			model.PassesDkim = boolPtr(dom.DnsSummary.PassesDkim)
 			model.PassesDmarc = boolPtr(dom.DnsSummary.PassesDmarc)
 		}
+
+		code, err := d.client.GetOwnershipCode(ctx, purelymail.GetOwnershipCodeRequest{
+			DomainName: dom.Name,
+		})
+		if err != nil {
+			resp.Diagnostics.AddError("Unable to get ownership code", err.Error())
+			return
+		}
+		model.OwnershipCode = types.StringValue(code.Code)
 
 		resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 		return

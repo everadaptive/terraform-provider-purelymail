@@ -90,5 +90,6 @@ func (p *purelymailProvider) Resources(_ context.Context) []func() resource.Reso
 func (p *purelymailProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewDomainDataSource,
+		NewDNSRecordsDataSource,
 	}
 }
