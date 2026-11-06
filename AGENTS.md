@@ -9,15 +9,22 @@ This repository implements an **OpenTofu/Terraform provider** for [PurelyMail](h
 - **Language:** Go
 - **Framework:** [terraform-plugin-framework](https://developer.hashicorp.com/terraform/plugin/framework) (the current recommended framework — do NOT use legacy SDKv2)
 - **Compatibility:** Targets OpenTofu 1.x and Terraform 1.x via the plugin protocol (protocol version 6+)
-- **Provider address:** reserved namespace placeholder (e.g. `registry.terraform.io/<org>/purelymail`) — update once the registry namespace is known
+- **Provider address:** `registry.opentofu.org/everadaptive/purelymail` (Go module: `github.com/everadaptive/terraform-provider-purelymail`)
+
+## API Facts (confirmed against the official spec)
+
+- **Spec:** https://news.purelymail.com/api/index.html (Swagger UI; the OpenAPI JSON is served at `https://news.purelymail.com/api/swagger-spec.js` as `window.swaggerSpec=…`)
+- **Auth:** API key header `Purelymail-Api-Token` — **not** Bearer
+- **Base URL:** `https://purelymail.com`, all endpoints are `POST` under `/api/v0/…`
+- **Responses:** wrapped as `{"type": "success", "result": <T>}`; errors return `{"code": …, "message": …}`
 
 ## First Tasks for New Agents
 
-1. **Build our own API client.** No suitable third-party Go client exists, so this repo maintains its own client under `internal/purelymail/`, written against the official PurelyMail API docs (Bearer-token auth against `https://api.purelymail.com`).
+1. **Build our own API client.** No suitable third-party Go client exists, so this repo maintains its own client under `internal/purelymail/`, written against the official API spec (see API Facts above).
    - Start **minimal**: auth + the endpoint(s) needed by the resource currently being built; grow the client incrementally as resources are added.
    - Keep it thin: typed request/response structs, error handling, and pagination only where the API requires it. No convenience layers beyond what the provider needs.
-2. Scaffold with `terraform-plugin-scaffold-framework` layout conventions (see Repository Layout below).
-3. Confirm the PurelyMail API surface (endpoints, auth) from current official docs before modeling any resource.
+2. Confirm the PurelyMail API surface from the official spec before modeling any resource.
+3. **Docs and tests ship with every change** — see "Docs & Tests As You Go" below; a resource change is not done until its docs and tests are updated in the same commit series.
 
 ## Repository Layout
 
@@ -32,18 +39,25 @@ docs/                    # provider & resource documentation (registry-style)
 
 ## Resources (target coverage)
 
-Implement, in roughly this priority order:
-
-- `purelymail_domain` — domain ownership/verification
-- `purelymail_user` — mailbox users, passwords, forwarding
-- `purelymail_domain_dns` / DNS records — required records for a domain
-- `purelymail_routing_rule` — routing/catch-all rules
+- [x] `purelymail_domain` — domain resource (CRUD + import) and data source
+- [x] `purelymail_user` — user resource (CRUD + import)
+- [x] `purelymail_dns_records` — data source emitting the standard record set per domain
+- [ ] `purelymail_routing_rule` — routing/catch-all rules
+- [ ] `purelymail_app_password`, `purelymail_password_reset` — secondary resources as needed
 
 Each resource needs a matching data source only if useful for lookups (e.g. domain lookup); do not add data sources speculatively.
 
+## Live Test Harness
+
+The sibling repo `../cloudflare-dns` (github.com:everadaptive/cloudflare-dns) doubles as the live integration test project:
+
+- `~/.tofurc` has `dev_overrides` pointing `everadaptive/purelymail` at `<this repo>/bin`, so `tofu` there runs the locally built binary. Rebuild with `go build -o bin/terraform-provider-purelymail .` after any code change.
+- Existing domains and users are imported there (`terraform.tfstate` holds the imports); a clean `tofu plan` (no changes) is the acceptance check for provider changes.
+- Keep commits flowing in **both** repos as work progresses.
+
 ## Provider Configuration
 
-- API authentication token (Bearer) via provider schema attribute, falling back to env var `PURELYMAIL_API_TOKEN`.
+- API authentication token via the `Purelymail-Api-Token` header, provided through the provider schema attribute, falling back to env var `PURELYMAIL_API_TOKEN`.
 - Base URL override attribute for testing.
 - Never log the token; redact in diagnostics and debug output.
 
@@ -55,6 +69,15 @@ Each resource needs a matching data source only if useful for lookups (e.g. doma
 - API client calls go through a single client type constructed in `Configure`; resources never build HTTP requests directly.
 - Map API errors to actionable diagnostics; include the API error body text.
 - Timeouts: support `timeouts` block on resources with sane defaults (1–2 min).
+
+## Docs & Tests As You Go
+
+Every resource or client change ships with its own tests and docs — do not defer them to a later task:
+
+- **Tests:** each new client endpoint gets unit tests (httptest) covering auth header, envelope decoding, and error mapping, before or alongside the resource that uses it (`go test ./...`).
+- **Examples:** every new resource/data source gets an example under `examples/<category>/<name>/` in the same change.
+- **Docs:** every new or schema-changed resource/data source updates `docs/` in the same change (registry-style pages: argument reference, import syntax, live example).
+- A task is not done until `go build ./... && go test ./...` passes and the docs/example for the change exist.
 
 ## Testing
 
