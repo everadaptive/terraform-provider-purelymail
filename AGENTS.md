@@ -89,7 +89,9 @@ Every resource or client change ships with its own tests and docs — do not def
 
 ## Tooling
 
-- `golangci-lint run` — must pass.
+- `make lint` (`golangci-lint run`) — must pass.
+- `make build` produces `bin/terraform-provider-purelymail` (the dev-override binary).
+- Releases: tag `v*` and push; GitHub Actions runs goreleaser (see `.goreleaser.yaml`, `.github/workflows/release.yml`). Optional GPG signing via repo secrets `GPG_PRIVATE_KEY`/`GPG_PASSPHRASE`.
 - `go mod tidy` after dependency changes.
 - Docs under `docs/` must be updated whenever a resource schema changes (generated templates acceptable).
 
