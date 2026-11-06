@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
+	"time"
 )
 
 const DefaultBaseURL = "https://purelymail.com"
@@ -34,9 +36,12 @@ type Client struct {
 
 func New(baseURL, token string) *Client {
 	return &Client{
-		baseURL: baseURL,
+		// Trim a trailing slash so baseURL+"/api/v0/..." never doubles up.
+		baseURL: strings.TrimSuffix(baseURL, "/"),
 		token:   token,
-		http:    &http.Client{},
+		http: &http.Client{
+			Timeout: 60 * time.Second,
+		},
 	}
 }
 
@@ -63,7 +68,8 @@ func (c *Client) do(ctx context.Context, path string, req any, out any) error {
 	}
 	defer httpResp.Body.Close()
 
-	respBody, err := io.ReadAll(httpResp.Body)
+	// Cap the response size so a misbehaving server cannot exhaust memory.
+	respBody, err := io.ReadAll(io.LimitReader(httpResp.Body, 10<<20))
 	if err != nil {
 		return fmt.Errorf("purelymail: %s: read response: %w", path, err)
 	}

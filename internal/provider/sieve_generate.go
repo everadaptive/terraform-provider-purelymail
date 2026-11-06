@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -46,8 +47,11 @@ func generateSieve(rules []sieveRuleSpec) (string, error) {
 	var body strings.Builder
 
 	for i, rule := range rules {
-		if rule.Description.ValueString() != "" {
-			fmt.Fprintf(&body, "# %s\n", rule.Description.ValueString())
+		// Sanitize: a description containing newlines could forge Sieve
+		// directives, so collapse them into spaces.
+		desc := strings.Join(strings.Fields(rule.Description.ValueString()), " ")
+		if desc != "" {
+			fmt.Fprintf(&body, "# %s\n", desc)
 		}
 
 		tests := make([]string, 0, len(rule.Matches))
@@ -165,9 +169,5 @@ func sieveQuoted(s string) string {
 }
 
 func sortStrings(s []string) {
-	for i := 1; i < len(s); i++ {
-		for j := i; j > 0 && s[j] < s[j-1]; j-- {
-			s[j], s[j-1] = s[j-1], s[j]
-		}
-	}
+	sort.Strings(s)
 }

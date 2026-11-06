@@ -134,8 +134,19 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		EnableSearchIndexing: boolPtrAddr(plan.EnableSearchIndexing),
 	}
 	if err := r.client.CreateUser(ctx, create); err != nil {
-		resp.Diagnostics.AddError("Unable to create user", err.Error())
-		return
+		// If the user already exists (e.g. a previous create succeeded but
+		// state was not saved), adopt it instead of failing with an orphan.
+		existing, findErr := r.client.GetUser(ctx, purelymail.GetUserRequest{
+			UserName: fullUserName(&plan),
+		})
+		if findErr != nil || existing == nil {
+			resp.Diagnostics.AddError("Unable to create user", err.Error())
+			return
+		}
+		resp.Diagnostics.AddWarning(
+			"User already existed",
+			fmt.Sprintf("User %q already existed and has been adopted into state.", fullUserName(&plan)),
+		)
 	}
 
 	if !r.read(ctx, &plan, &resp.Diagnostics) {

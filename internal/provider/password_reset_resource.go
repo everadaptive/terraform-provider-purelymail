@@ -108,8 +108,28 @@ func (r *passwordResetResource) Create(ctx context.Context, req resource.CreateR
 		Description:   plan.Description.ValueString(),
 		AllowMfaReset: boolPtrAddr(plan.AllowMfaReset),
 	}); err != nil {
-		resp.Diagnostics.AddError("Unable to create password reset method", err.Error())
-		return
+		// If the method already exists (e.g. a previous create succeeded but
+		// state was not saved), adopt it instead of failing with an orphan.
+		existing, findErr := r.client.ListPasswordReset(ctx, purelymail.GetUserRequest{
+			UserName: plan.UserName.ValueString(),
+		})
+		found := false
+		if findErr == nil {
+			for _, method := range existing {
+				if method.Target == plan.Target.ValueString() {
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			resp.Diagnostics.AddError("Unable to create password reset method", err.Error())
+			return
+		}
+		resp.Diagnostics.AddWarning(
+			"Password reset method already existed",
+			fmt.Sprintf("A reset method targeting %q already existed and has been adopted into state.", plan.Target.ValueString()),
+		)
 	}
 
 	if !r.read(ctx, &plan, &resp.Diagnostics) {

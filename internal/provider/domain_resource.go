@@ -113,8 +113,17 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 	if err := r.client.AddDomain(ctx, purelymail.AddDomainRequest{
 		DomainName: plan.Name.ValueString(),
 	}); err != nil {
-		resp.Diagnostics.AddError("Unable to add domain", err.Error())
-		return
+		// If the domain already exists (e.g. a previous create succeeded but
+		// state was not saved), adopt it instead of failing with an orphan.
+		existing, findErr := r.client.FindDomain(ctx, plan.Name.ValueString())
+		if findErr != nil || existing == nil {
+			resp.Diagnostics.AddError("Unable to add domain", err.Error())
+			return
+		}
+		resp.Diagnostics.AddWarning(
+			"Domain already existed",
+			fmt.Sprintf("Domain %q already existed and has been adopted into state.", plan.Name.ValueString()),
+		)
 	}
 
 	if !r.read(ctx, &plan, &resp.Diagnostics) {
@@ -186,6 +195,14 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Only settings we can actually control are sent; the rest is read-only.
+	// Skip the call when nothing actually changed.
+	if updates.AllowAccountReset == nil && updates.SymbolicSubaddressing == nil {
+		if !r.read(ctx, &plan, &resp.Diagnostics) {
+			return
+		}
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		return
+	}
 	if err := r.client.UpdateDomainSettings(ctx, updates); err != nil {
 		resp.Diagnostics.AddError("Unable to update domain settings", err.Error())
 		return

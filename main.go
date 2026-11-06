@@ -19,7 +19,7 @@ func main() {
 	err := providerserver.Serve(context.Background(), func() tfprovider.Provider {
 		return provider.New()
 	}, providerserver.ServeOpts{
-		Address: "registry.terraform.io/everadaptive/purelymail",
+		Address: "registry.opentofu.org/everadaptive/purelymail",
 		Debug:   debug,
 	})
 	if err != nil {

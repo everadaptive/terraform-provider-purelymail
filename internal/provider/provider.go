@@ -67,6 +67,16 @@ func (p *purelymailProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
+	if config.APIToken.IsUnknown() {
+		// Value not yet known (e.g. computed); the framework will re-run
+		// Configure once it is.
+		resp.Diagnostics.AddWarning(
+			"PurelyMail API token not yet known",
+			"The api_token value is not known yet; configuration will be retried.",
+		)
+		return
+	}
+
 	token := config.APIToken.ValueString()
 	if token == "" {
 		token = os.Getenv("PURELYMAIL_API_TOKEN")

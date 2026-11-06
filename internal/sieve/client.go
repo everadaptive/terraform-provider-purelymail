@@ -6,15 +6,21 @@ package sieve
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// literalRe matches a trailing literal declaration like {5} or {5+}.
+var literalRe = regexp.MustCompile(`\{(\d+)\+?\}$`)
 
 // DefaultHost is PurelyMail's ManageSieve endpoint.
 const DefaultHost = "imap.purelymail.com:4190"
@@ -28,6 +34,15 @@ type Script struct {
 	Active bool
 }
 
+// ResponseError is a NO/BYE response carrying a parenthesized code, e.g.
+// NO (ACTIVE) "...".
+type ResponseError struct {
+	Code string
+	Line string
+}
+
+func (e *ResponseError) Error() string { return "sieve: " + e.Line }
+
 // Client is a ManageSieve client for a single session.
 type Client struct {
 	conn net.Conn
@@ -36,11 +51,12 @@ type Client struct {
 
 // Dial connects, performs STARTTLS, and returns the unauthenticated client
 // along with the server capabilities.
-func Dial(addr string) (*Client, Capabilities, error) {
+func Dial(ctx context.Context, addr string) (*Client, Capabilities, error) {
 	if addr == "" {
 		addr = DefaultHost
 	}
-	raw, err := net.Dial("tcp", addr)
+	dialer := net.Dialer{Timeout: 10 * time.Second}
+	raw, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("sieve: dial %s: %w", addr, err)
 	}
@@ -65,11 +81,15 @@ func Dial(addr string) (*Client, Capabilities, error) {
 	// before the TLS handshake; drain them so the handshake sees a clean
 	// stream. Stop on the trailing OK or on a read timeout (server sent
 	// nothing more).
-	c.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	c.conn.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
 	for {
+		if _, err := c.r.ReadByte(); err != nil {
+			break // no pending data: timeout or EOF
+		}
+		c.r.UnreadByte()
 		line, err := c.r.ReadString('\n')
 		if err != nil {
-			break // timeout or EOF: nothing more pending
+			break
 		}
 		if strings.HasPrefix(strings.TrimRight(line, "\r\n"), "OK") {
 			break
@@ -81,9 +101,17 @@ func Dial(addr string) (*Client, Capabilities, error) {
 	if splitErr != nil {
 		host = addr
 	}
-	tlsConn := tls.Client(raw, &tls.Config{ServerName: host})
-	if err := tlsConn.Handshake(); err != nil {
+	raw.SetDeadline(time.Now().Add(30 * time.Second))
+	tlsConn := tls.Client(raw, &tls.Config{
+		ServerName: host,
+		MinVersion: tls.VersionTLS12,
+	})
+	if err := tlsConn.HandshakeContext(ctx); err != nil {
 		return cleanup(fmt.Errorf("sieve: TLS handshake: %w", err))
+	}
+	raw.SetDeadline(time.Time{})
+	if cs := tlsConn.ConnectionState(); len(cs.PeerCertificates) == 0 {
+		return cleanup(fmt.Errorf("sieve: no server certificate presented for %s", host))
 	}
 	c.conn = tlsConn
 	c.r = bufio.NewReader(tlsConn)
@@ -185,7 +213,8 @@ func (c *Client) DeleteScript(name string) error {
 	if _, err := c.readResponse(); err != nil {
 		// This server rejects deleting the active script; deactivate and
 		// retry once.
-		if strings.Contains(err.Error(), "ACTIVE") {
+		var rerr *ResponseError
+		if errors.As(err, &rerr) && rerr.Code == "ACTIVE" {
 			if err := c.SetActive(""); err != nil {
 				return err
 			}
@@ -207,7 +236,16 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
+// opDeadline bounds each protocol round trip so a hung server cannot block
+// the caller indefinitely.
+const opDeadline = 30 * time.Second
+
+func (c *Client) setOpDeadline() {
+	_ = c.conn.SetDeadline(time.Now().Add(opDeadline))
+}
+
 func (c *Client) writeLine(line string) error {
+	c.setOpDeadline()
 	_, err := io.WriteString(c.conn, line+"\r\n")
 	return err
 }
@@ -240,6 +278,17 @@ func (c *Client) readCapabilities() (Capabilities, error) {
 	}
 }
 
+// responseCode extracts the parenthesized response code from a NO line,
+// e.g. NO (ACTIVE) "..." yields "ACTIVE".
+func responseCode(line string) string {
+	start := strings.Index(line, "(")
+	end := strings.Index(line, ")")
+	if start >= 0 && end > start {
+		return line[start+1 : end]
+	}
+	return ""
+}
+
 // readResponse reads one command result line, erroring on NO/BYE.
 func (c *Client) readResponse() (string, error) {
 	for {
@@ -252,6 +301,9 @@ func (c *Client) readResponse() (string, error) {
 			continue
 		}
 		if strings.HasPrefix(line, "NO") || strings.HasPrefix(line, "BYE") {
+			if code := responseCode(line); code != "" {
+				return line, &ResponseError{Code: code, Line: line}
+			}
 			return line, fmt.Errorf("sieve: %s", line)
 		}
 		return line, nil
@@ -268,12 +320,11 @@ func (c *Client) readLiteralResponse() (string, error) {
 	if strings.HasPrefix(line, "NO") || strings.HasPrefix(line, "BYE") {
 		return "", fmt.Errorf("sieve: %s", line)
 	}
-	open := strings.Index(line, "{")
-	end := strings.LastIndex(line, "}")
-	if open < 0 || end < open {
+	m := literalRe.FindStringSubmatch(line)
+	if m == nil {
 		return "", fmt.Errorf("sieve: expected literal, got %q", line)
 	}
-	size, err := strconv.Atoi(line[open+1 : end])
+	size, err := strconv.Atoi(m[1])
 	if err != nil {
 		return "", fmt.Errorf("sieve: bad literal size in %q", line)
 	}

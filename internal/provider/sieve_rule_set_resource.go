@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 
@@ -159,7 +160,7 @@ func (r *sieveRuleSetResource) Configure(_ context.Context, req resource.Configu
 }
 
 func (r *sieveRuleSetResource) connect(ctx context.Context, m *sieveRuleSetModel) (*sieve.Client, error) {
-	c, _, err := sieve.Dial(r.sieveHost)
+	c, _, err := sieve.Dial(ctx, r.sieveHost)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +278,7 @@ func (r *sieveRuleSetResource) Delete(ctx context.Context, req resource.DeleteRe
 func (r *sieveRuleSetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Import sets user_handle/name from the "<user_handle>:<name>" id; the
 	// password stays unset, so refresh is skipped until a password is set.
-	user, name, found := cut2(req.ID, ":")
+	user, name, found := strings.Cut(req.ID, ":")
 	if !found {
 		resp.Diagnostics.AddError(
 			"Invalid import id",

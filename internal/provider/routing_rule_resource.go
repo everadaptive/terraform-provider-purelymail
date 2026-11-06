@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"strconv"
 
 	"github.com/everadaptive/terraform-provider-purelymail/internal/purelymail"
@@ -110,7 +112,11 @@ func (r *routingRuleResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	if err := r.client.CreateRoutingRule(ctx, r.request(ctx, &plan)); err != nil {
+	createReq := r.request(ctx, &plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if err := r.client.CreateRoutingRule(ctx, createReq); err != nil {
 		resp.Diagnostics.AddError("Unable to create routing rule", err.Error())
 		return
 	}
@@ -143,11 +149,12 @@ func findNewRule(before, after []purelymail.RoutingRule, plan *routingRuleResour
 	}
 	for i := range after {
 		r := &after[i]
+		// catchall is intentionally not matched: it is Optional+Computed
+		// and the server may default it differently than the plan value.
 		if !existing[r.ID] &&
 			r.DomainName == plan.DomainName.ValueString() &&
 			r.Prefix == plan.Prefix.ValueBool() &&
-			r.MatchUser == plan.MatchUser.ValueString() &&
-			r.Catchall == plan.Catchall.ValueBool() {
+			r.MatchUser == plan.MatchUser.ValueString() {
 			return r
 		}
 	}
@@ -211,12 +218,9 @@ func (r *routingRuleResource) ImportState(ctx context.Context, req resource.Impo
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-func (r *routingRuleResource) request(ctx context.Context, m *routingRuleResourceModel) purelymail.CreateRoutingRuleRequest {
+func (r *routingRuleResource) request(ctx context.Context, m *routingRuleResourceModel, diags *diag.Diagnostics) purelymail.CreateRoutingRuleRequest {
 	var targets []string
-	diags := m.TargetAddresses.ElementsAs(ctx, &targets, false)
-	if diags.HasError() {
-		return purelymail.CreateRoutingRuleRequest{}
-	}
+	diags.Append(m.TargetAddresses.ElementsAs(ctx, &targets, false)...)
 
 	return purelymail.CreateRoutingRuleRequest{
 		DomainName:      m.DomainName.ValueString(),

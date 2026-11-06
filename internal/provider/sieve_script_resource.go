@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/everadaptive/terraform-provider-purelymail/internal/sieve"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -104,7 +105,7 @@ func (r *sieveScriptResource) Configure(_ context.Context, req resource.Configur
 }
 
 func (r *sieveScriptResource) connect(ctx context.Context, m *sieveScriptResourceModel) (*sieve.Client, error) {
-	c, _, err := sieve.Dial(r.sieveHost)
+	c, _, err := sieve.Dial(ctx, r.sieveHost)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +230,7 @@ func (r *sieveScriptResource) Delete(ctx context.Context, req resource.DeleteReq
 func (r *sieveScriptResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Import sets user_handle/name from the "<user_handle>:<name>" id; the
 	// password stays null, so refresh is skipped until a password is set.
-	user, name, found := cut2(req.ID, ":")
+	user, name, found := strings.Cut(req.ID, ":")
 	if !found {
 		resp.Diagnostics.AddError(
 			"Invalid import id",
@@ -240,13 +241,4 @@ func (r *sieveScriptResource) ImportState(ctx context.Context, req resource.Impo
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_handle"), user)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
-}
-
-func cut2(s, sep string) (before, after string, found bool) {
-	for i := 0; i+len(sep) <= len(s); i++ {
-		if s[i:i+len(sep)] == sep {
-			return s[:i], s[i+len(sep):], true
-		}
-	}
-	return s, "", false
 }
