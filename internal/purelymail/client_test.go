@@ -117,3 +117,22 @@ func TestAPIError(t *testing.T) {
 		t.Errorf("apiErr = %+v", apiErr)
 	}
 }
+
+func TestListDomains(t *testing.T) {
+	envelope := `{"result":{"domains":[{"name":"x.com","isShared":false,"dnsSummary":{"passesMx":true,"passesSpf":false,"passesDkim":true,"passesDmarc":true}}]}}`
+	c, rec := newTestServer(t, http.StatusOK, envelope)
+
+	domains, err := c.ListDomains(context.Background(), ListDomainsRequest{})
+	if err != nil {
+		t.Fatalf("ListDomains: %v", err)
+	}
+	if len(domains) != 1 || domains[0].Name != "x.com" {
+		t.Errorf("domains = %+v", domains)
+	}
+	if domains[0].DnsSummary == nil || domains[0].DnsSummary.PassesSpf == nil || *domains[0].DnsSummary.PassesSpf {
+		t.Errorf("dnsSummary = %+v", domains[0].DnsSummary)
+	}
+	if rec.body != "{}" {
+		t.Errorf("body = %q", rec.body)
+	}
+}

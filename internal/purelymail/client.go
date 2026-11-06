@@ -101,6 +101,17 @@ func (c *Client) CheckAccountCredit(ctx context.Context) (credit string, err err
 	return out.Credit, nil
 }
 
+// ListDomains lists domains accessible to the account.
+func (c *Client) ListDomains(ctx context.Context, req ListDomainsRequest) ([]ApiDomainInfo, error) {
+	var out struct {
+		Domains []ApiDomainInfo `json:"domains"`
+	}
+	if err := c.do(ctx, "listDomains", req, &out); err != nil {
+		return nil, err
+	}
+	return out.Domains, nil
+}
+
 // ListUser lists all usernames under the account (up to 1000).
 func (c *Client) ListUser(ctx context.Context) ([]string, error) {
 	var out struct {

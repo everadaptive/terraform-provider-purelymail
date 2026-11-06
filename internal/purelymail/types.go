@@ -1,5 +1,27 @@
 package purelymail
 
+// ListDomainsRequest lists domains accessible to the account.
+type ListDomainsRequest struct {
+	IncludeShared *bool `json:"includeShared,omitempty"`
+}
+
+// ApiDomainDnsSummary summarizes the domain's DNS health checks.
+type ApiDomainDnsSummary struct {
+	PassesMx    *bool `json:"passesMx"`
+	PassesSpf   *bool `json:"passesSpf"`
+	PassesDkim  *bool `json:"passesDkim"`
+	PassesDmarc *bool `json:"passesDmarc"`
+}
+
+// ApiDomainInfo describes a domain under the account.
+type ApiDomainInfo struct {
+	Name                  string               `json:"name"`
+	AllowAccountReset     *bool                `json:"allowAccountReset"`
+	SymbolicSubaddressing *bool                `json:"symbolicSubaddressing"`
+	IsShared              *bool                `json:"isShared"`
+	DnsSummary            *ApiDomainDnsSummary `json:"dnsSummary"`
+}
+
 // CreateUserRequest creates a user under the account's domain.
 type CreateUserRequest struct {
 	UserName                 string `json:"userName"`
